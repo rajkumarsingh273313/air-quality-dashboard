@@ -1,0 +1,188 @@
+
+const API_KEY = "b64f46c7629aac59af0bc1bab285b1316709658d";
+
+/* =======================
+    DATE & TIME
+======================= */
+// Function to display the current date and time
+function updateDateTime() {
+  const now = new Date();
+  document.getElementById("datetime").textContent = now.toLocaleDateString();
+}
+
+// Display the time immediately and then update it every second (1000ms)
+updateDateTime();
+setInterval(updateDateTime, 1000);
+
+/* =======================
+    AQI INFO (Air Quality Index)
+======================= */
+// Returns the status, color, and description based on the AQI number
+function getAQIInfo(aqi) {
+  if (aqi <= 50)
+    return {
+      color: "#00e676",
+      status: "Good",
+      risk: "10%",
+      desc: "Air quality is satisfactory",
+    };
+  if (aqi <= 100)
+    return {
+      color: "#ffeb3b",
+      status: "Moderate",
+      risk: "35%",
+      desc: "Moderate risk due to air quality",
+    };
+  if (aqi <= 150)
+    return {
+      color: "#ff9800",
+      status: "Unhealthy for sensitive",
+      risk: "55%",
+      desc: "Sensitive groups may be affected",
+    };
+  if (aqi <= 200)
+    return {
+      color: "#f44336",
+      status: "Unhealthy",
+      risk: "75%",
+      desc: "Everyone may experience effects",
+    };
+  if (aqi <= 300)
+    return {
+      color: "#9c27b0",
+      status: "Very Unhealthy",
+      risk: "90%",
+      desc: "Health alert conditions",
+    };
+  return {
+    color: "#880e4f",
+    status: "Hazardous",
+    risk: "100%",
+    desc: "Emergency conditions",
+  };
+}
+// 
+
+/* =======================
+    UPDATE UI
+======================= */
+// Updates the HTML elements with the fetched AQI data
+function updateUI(aqiData, cityName) {
+  // The API returns an index from 1 to 5 for AQI. We scale it up.
+  console.log("Updating UI:", aqiData);
+  console.log("Updating UI for:", cityName);
+  const aqi = Math.round(aqiData.list[0].main.aqi * 50); 
+  const info = getAQIInfo(aqi);
+
+  // Update AQI displays and colors
+function setText(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+}
+
+function setStyle(id, prop, value) {
+  const el = document.getElementById(id);
+  if (el) el.style[prop] = value;
+}
+
+setText("mainAqi", aqi);
+setStyle("mainAqi", "color", info.color);
+
+setText("badge", aqi);
+setStyle("badge", "background", info.color);
+
+setText("marker", aqi);
+setStyle("marker", "background", info.color);
+
+setText("popupAqi", aqi);
+setText("popupStatus", info.status);
+
+setText("risk", info.risk);
+setText("riskDesc", info.desc);
+setText("location", cityName);
+setText("popupCity", cityName);
+
+  // Find the pollutant with the highest concentration
+  const comp = aqiData.list[0].components;
+  const pollutants = [
+    { name: "PM2.5", val: comp.pm2_5 }, 
+    { name: "PM10", val: comp.pm10 },   
+    { name: "O3", val: comp.o3 },      
+  ];
+ const pollutantEl = document.getElementById("pollutant");
+if (pollutantEl) {
+  pollutantEl.textContent = pollutants.reduce((m, p) =>
+    p.val > m.val ? p : m
+  ).name;
+}
+  
+  // NOTE: Elements for temperature, humidity, and wind are no longer updated here.
+}
+
+/* =======================
+    FETCH AQI (CITY ONLY)
+======================= */
+async function fetchAQI(city) {
+  try {
+    document.getElementById("loading").style.display = "block";
+
+    // 1. Get Latitude and Longitude (Geo-location)
+    const geoRes = await fetch(
+     `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(city)},IN&limit=1&appid=${API_KEY}`
+    );
+    const geoData = await geoRes.json();
+
+    if (!geoData || geoData.length === 0) {
+  alert("City not found. Try full name like 'Warangal' or 'Delhi'");
+  return;
+}
+
+    const { lat, lon, name, country } = geoData[0];
+    const cityName = `${name}, ${country}`;
+
+    // 2. Get Air Quality Index (AQI) Data
+    // We removed the weather fetch call completely.
+  const aqiRes = await fetch(
+  `https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${API_KEY}`
+);
+const aqiData = await aqiRes.json();
+    
+    // 3. Update the UI
+    // We pass only the AQI data and city name.
+    updateUI(aqiData, cityName);
+
+  } catch (error) {
+    alert("Error fetching AQI data. Check your network or API Key.");
+    console.error("An error occurred:", error);
+  } finally {
+    document.getElementById("loading").style.display = "none";
+  }
+}
+
+/* =======================
+    SEARCH INPUT
+======================= */
+// Listens for the Enter key press in the search box
+const input = document.getElementById("citySearch");
+
+input.addEventListener("keydown", function (e) {
+  if (e.key === "Enter") {
+    const city = input.value.trim();
+
+    console.log("User entered:", city); // DEBUG
+
+    if (city) {
+      fetchAQI(city);
+    }
+  }
+});
+
+/* =======================
+    DEFAULT CITY
+======================= */
+fetchAQI("Hyderabad");
+
+document.getElementById("searchButton").addEventListener("click", () => {
+  const city = document.getElementById("citySearch").value.trim();
+  if (city) fetchAQI(city);
+});

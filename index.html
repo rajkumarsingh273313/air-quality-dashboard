@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="AirIndex - Real-time Air Quality Index monitoring with AI predictions" />
+    <meta name="theme-color" content="#0f172a" />
+    
+    <title>AirIndex - Air Quality Monitor</title>
+
+    <!-- External Libraries -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    
+    <!-- Local Styles -->
+    <link rel="stylesheet" href="style.css">
+  </head>
+  
+  <body>
+    <div class="container">
+      <!-- HEADER -->
+      <header class="header" role="banner">
+        <div class="logo" aria-label="AirIndex Logo">
+          <i class="fas fa-globe-americas" aria-hidden="true"></i>
+          <span>AirIndex</span>
+        </div>
+        <nav class="nav" role="navigation" aria-label="Main Navigation">
+          <a href="#air-quality" aria-label="Air Quality Information">Air Quality</a>
+          <a href="#monitors" aria-label="Monitor Stations">Monitors</a>
+          <button id="aboutBtn" class="nav-link" aria-label="About AirIndex">About</button>
+          <button class="btn-primary" aria-label="Get Started with AirIndex">Get Started</button>
+        </nav>
+      </header>
+
+      <!-- NOTIFICATION ALERTS -->
+      <div id="error-message" class="alert alert-error" role="alert" aria-live="polite" style="display: none;"></div>
+      <div id="success-message" class="alert alert-success" role="alert" aria-live="polite" style="display: none;"></div>
+
+      <!-- MAIN CONTENT -->
+      <main class="main-content" role="main">
+        
+        <!-- LEFT PANEL: STATISTICS & SEARCH -->
+        <section class="left-panel" aria-labelledby="statistics-title">
+          <h1 class="title" id="statistics-title">
+            Air Quality <span class="light">Index</span>
+          </h1>
+          
+          <div class="subtitle" aria-label="Current location and date">
+            <div id="datetime" aria-live="polite" aria-label="Current date"></div>
+            <div aria-label="Current location">Local → <span id="location" lang="en">IDN</span></div>
+          </div>
+
+          <!-- SEARCH BOX -->
+          <div class="search-box" role="search">
+            <i class="fas fa-search" aria-hidden="true"></i>
+            <input 
+              type="text" 
+              id="citySearch" 
+              placeholder="Search city..." 
+              aria-label="Search for a city"
+              autocomplete="off"
+              maxlength="50"
+            />
+            <button 
+              id="searchButton" 
+              class="btn-search"
+              aria-label="Search for selected city"
+            >
+              Search
+            </button> 
+          </div>
+
+          <!-- ROW 1: MAIN STATISTICS & RISK OF POLLUTION -->
+          <div class="card-row">
+            <!-- MAIN STATISTICS CARD -->
+            <section class="card main-stats-card" aria-labelledby="main-stats-title">
+              <div class="card-title" id="main-stats-title">Main Statistics</div>
+              <div style="font-size: 12px; color: rgba(255, 255, 255, 0.6);" aria-label="Air Quality Index">
+                AQI
+              </div>
+              <div class="aqi-display" id="mainAqi" aria-live="polite" aria-label="Current AQI value">78</div>
+              <div id="aqiEmoji" style="font-size: 28px; margin-top: 5px;" aria-label="Air quality status emoji">😐</div>
+              
+              <div class="aqi-bar" id="aqi-bar" role="progressbar" aria-valuenow="78" aria-valuemin="0" aria-valuemax="300" aria-label="Air quality scale">
+                <div class="aqi-fill" id="aqiFill"></div>
+              </div>
+
+              <div class="aqi-labels">
+                <span aria-label="Good air quality">0</span>
+                <span aria-label="Moderate air quality">50</span>
+                <span aria-label="Unhealthy for sensitive groups">100</span>
+                <span aria-label="Unhealthy">150</span>
+                <span aria-label="Very unhealthy">200</span>
+                <span aria-label="Hazardous">300+</span>
+              </div>
+              
+              <div class="info-row">
+                <span><strong>Dominant Pollutant</strong></span>
+                <span id="pollutant" aria-live="polite">PM2.5</span>
+              </div>
+            </section>
+
+            <!-- Risk of Pollution Card -->
+            <article class="card small-card alert-card" aria-labelledby="risk-title">
+              <div class="risk-header">
+                <div class="card-title" id="risk-title">Risk of Pollution</div>
+                <button class="btn-secondary details-btn" id="riskDetailsBtn" aria-label="View pollution risk details">Details</button>
+              </div>
+              <div style="font-size: 12px; opacity: 0.7;">Risk Level</div>
+              <div class="risk-value" id="risk" aria-live="polite">35%</div>
+              <div id="riskDesc" aria-live="polite" class="risk-desc">Moderate risk</div>
+              <div id="riskDetails" class="details-content" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 13px;"></div>
+            </article>
+          </div>
+
+          <!-- ROW 2: HEALTH ADVISORY & POLLUTION IMPACT -->
+          <div class="card-row">
+            <!-- Health Advisory Card -->
+            <article class="card small-card alert-card advisory-card" aria-labelledby="advisory-title">
+              <div class="advisory-header">
+                <div class="card-title" id="advisory-title">Health Advisory</div>
+                <button class="btn-secondary details-btn" id="advisoryDetailsBtn" aria-label="View health advisory details">Details</button>
+              </div>
+              <div id="adviceText" aria-live="polite" role="status" class="advice-content">-- Advice will appear here --</div>
+              <div id="advisoryDetails" class="details-content" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 13px;"></div>
+            </article>
+
+            <!-- Pollution Impact Card -->
+            <article class="card small-card" aria-labelledby="impact-title">
+              <div class="card-title" id="impact-title">Pollution Impact</div>
+              <div id="cigaretteText" aria-live="polite" role="status">-- Calculating impact --</div>
+            </article>
+          </div>
+
+          <!-- ROW 3: AQI TREND & AI PREDICTION -->
+          <div class="card-row">
+            <!-- AQI Trend Chart -->
+            <article class="card small-card" aria-labelledby="trend-title">
+              <div class="card-title" id="trend-title">AQI Trend</div>
+              <canvas id="aqiChart" height="100" aria-label="AQI historical trend chart"></canvas>
+            </article>
+
+            <!-- AI Prediction Card -->
+            <article class="card small-card" aria-labelledby="prediction-title">
+              <div class="card-title" id="prediction-title">AI Prediction</div>
+              <div id="predictionText" aria-live="polite" role="status">-- Predicting --</div>
+            </article>
+          </div>
+
+          <!-- LOADING INDICATOR -->
+          <div class="loading" id="loading" role="status" aria-live="polite" aria-label="Loading data">
+            <i class="fas fa-spinner fa-spin fa-2x" aria-hidden="true"></i>
+            <p>Loading...</p>
+          </div>
+        </section>
+
+        <!-- RIGHT PANEL: AIR QUALITY GUIDELINES & INSIGHTS -->
+        <section class="right-panel" aria-labelledby="guidelines-title">
+          
+          <!-- Air Quality Index Guidelines -->
+          <div class="card" aria-labelledby="guidelines-title">
+            <div class="card-title" id="guidelines-title">
+              <i class="fas fa-info-circle" style="margin-right: 10px; color: #5b9cf5;"></i>
+              AQI Guidelines
+            </div>
+            
+            <div class="guidelines-container">
+              <!-- Good -->
+              <div class="guideline-box" style="border-left-color: #00e676;">
+                <div class="guideline-level" style="background: #00e676;">Good</div>
+                <div class="guideline-range">0 - 50</div>
+                <div class="guideline-effect">😄 No health effects</div>
+              </div>
+
+              <!-- Moderate -->
+              <div class="guideline-box" style="border-left-color: #ffeb3b;">
+                <div class="guideline-level" style="background: #ffeb3b; color: #000;">Moderate</div>
+                <div class="guideline-range">51 - 100</div>
+                <div class="guideline-effect">🙂 Minimal for most people</div>
+              </div>
+
+              <!-- Unhealthy for Sensitive Groups -->
+              <div class="guideline-box" style="border-left-color: #ff9800;">
+                <div class="guideline-level" style="background: #ff9800;">U.S.G.</div>
+                <div class="guideline-range">101 - 150</div>
+                <div class="guideline-effect">😷 Sensitive groups affected</div>
+              </div>
+
+              <!-- Unhealthy -->
+              <div class="guideline-box" style="border-left-color: #f44336;">
+                <div class="guideline-level" style="background: #f44336;">Unhealthy</div>
+                <div class="guideline-range">151 - 200</div>
+                <div class="guideline-effect">🤒 Everyone may be affected</div>
+              </div>
+
+              <!-- Very Unhealthy -->
+              <div class="guideline-box" style="border-left-color: #9c27b0;">
+                <div class="guideline-level" style="background: #9c27b0;">V. Unhealthy</div>
+                <div class="guideline-range">201 - 300</div>
+                <div class="guideline-effect">🤢 Health alert condition</div>
+              </div>
+
+              <!-- Hazardous -->
+              <div class="guideline-box" style="border-left-color: #880e4f;">
+                <div class="guideline-level" style="background: #880e4f;">Hazardous</div>
+                <div class="guideline-range">300+</div>
+                <div class="guideline-effect">☠️ Emergency condition</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Local Air Quality Insights -->
+          <div class="card" aria-labelledby="insights-title">
+            <div class="card-title" id="insights-title">
+              <i class="fas fa-chart-bar" style="margin-right: 10px; color: #a855f7;"></i>
+              Air Quality Details
+            </div>
+
+            <div class="insights-grid">
+              <!-- PM2.5 -->
+              <div class="insight-metric">
+                <div class="metric-label">PM2.5</div>
+                <div class="metric-value" id="pm25Value">-</div>
+                <div class="metric-unit">µg/m³</div>
+              </div>
+
+              <!-- PM10 -->
+              <div class="insight-metric">
+                <div class="metric-label">PM10</div>
+                <div class="metric-value" id="pm10Value">-</div>
+                <div class="metric-unit">µg/m³</div>
+              </div>
+
+              <!-- O3 -->
+              <div class="insight-metric">
+                <div class="metric-label">O₃</div>
+                <div class="metric-value" id="o3Value">-</div>
+                <div class="metric-unit">µg/m³</div>
+              </div>
+
+              <!-- NO2 -->
+              <div class="insight-metric">
+                <div class="metric-label">NO₂</div>
+                <div class="metric-value" id="no2Value">-</div>
+                <div class="metric-unit">µg/m³</div>
+              </div>
+
+              <!-- SO2 -->
+              <div class="insight-metric">
+                <div class="metric-label">SO₂</div>
+                <div class="metric-value" id="so2Value">-</div>
+                <div class="metric-unit">µg/m³</div>
+              </div>
+
+              <!-- CO -->
+              <div class="insight-metric">
+                <div class="metric-label">CO</div>
+                <div class="metric-value" id="coValue">-</div>
+                <div class="metric-unit">µg/m³</div>
+              </div>
+            </div>
+
+            <!-- Additional Info -->
+            <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+              <div class="insight-info">
+                <span style="font-weight: 600; color: #a855f7;">💨 Dominant Pollutant:</span>
+                <span style="float: right;" id="dominantPollutant">-</span>
+              </div>
+              <div class="insight-info">
+                <span style="font-weight: 600; color: #5b9cf5;">🏥 Health Impact:</span>
+                <span style="float: right;" id="healthImpact">-</span>
+              </div>
+              <div class="insight-info">
+                <span style="font-weight: 600; color: #f59e0b;">⚠️ Recommendation:</span>
+                <span style="float: right;" id="recommendation">-</span>
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+      </main>
+    </div>
+
+    <!-- ABOUT MODAL -->
+    <div id="aboutModal" class="modal" aria-hidden="true" role="dialog" aria-labelledby="about-modal-title">
+      <div class="modal-overlay"></div>
+      <div class="modal-content">
+        <button class="modal-close" aria-label="Close About modal">
+          <i class="fas fa-times"></i>
+        </button>
+        
+        <h2 id="about-modal-title">About AirIndex</h2>
+        
+        <!-- Team Section -->
+        <section class="modal-section">
+          <h3 class="modal-heading">Team F10</h3>
+          <p class="modal-text">
+            Developed by Team F10 from <strong>MLK Institute of Technology</strong>, 
+            Department of Computer Science & Engineering
+          </p>
+          <div class="team-members">
+            <div class="member">
+              <i class="fas fa-user-circle"></i>
+              <span>Raj Kumar Singh (24R21A05J5)</span>
+            </div>
+            <div class="member">
+              <i class="fas fa-user-circle"></i>
+              <span>Ramya Katuri (24R21A05HJ)</span>
+            </div>
+            <div class="member">
+              <i class="fas fa-user-circle"></i>
+              <span>G.Mahimanvitha (24R21A05H8)</span>
+            </div>
+          </div>
+        </section>
+        
+        <!-- Project Section -->
+        <section class="modal-section">
+          <h3 class="modal-heading">Project: Smart AQI Monitoring System Using Web API</h3>
+          <p class="modal-text">
+            A low-cost, web-based real-time air quality monitoring system designed to provide 
+            essential health advisory and pollution awareness to users.
+          </p>
+          
+          <h4 class="modal-subheading">Key Objectives</h4>
+          <ul class="modal-list">
+            <li>Real-time Air Quality Index monitoring</li>
+            <li>Health advisory based on pollution levels</li>
+            <li>Pollution awareness and impact assessment</li>
+            <li>Smart alerts for hazardous conditions</li>
+          </ul>
+          
+          <h4 class="modal-subheading">Features</h4>
+          <ul class="modal-list">
+            <li>Live AQI display with color-coded indicators</li>
+            <li>Personalized health warnings and precautions</li>
+            <li>Pollution impact calculation (cigarette equivalent)</li>
+            <li>Historical trend analysis and visualization</li>
+            <li>AI-powered AQI predictions</li>
+            <li>Detailed pollutant breakdown (PM2.5, PM10, O₃, NO₂, SO₂, CO)</li>
+          </ul>
+        </section>
+      </div>
+    </div>
+    <script src="script.js" defer></script>
+    
+    <!-- Skip to main content link (accessibility) -->
+    <a href="#main" class="sr-only">Skip to main content</a>
+  </body>
+</html>

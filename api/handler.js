@@ -1,19 +1,13 @@
-// LOCAL DEVELOPMENT SERVER ONLY
-// For production, use /api/handler.js via Vercel
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
-const path = require("path");
 
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
-
-// Serve static files from public folder
-app.use(express.static(path.join(__dirname, 'public')));
 
 // Logger utility
 const logger = {
@@ -23,18 +17,30 @@ const logger = {
 };
 
 // Environment variables
-const MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/aqiDB";
-const PORT = process.env.PORT || 3000;
+const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI || "mongodb://127.0.0.1:27017/aqiDB";
 
 // MongoDB Connection with error handling
-mongoose.connect(MONGO_URI, {
-  retryWrites: true
-})
-  .then(() => logger.info("✅ MongoDB Connected"))
-  .catch(err => {
+let isConnected = false;
+
+const connectDB = async () => {
+  if (isConnected) {
+    logger.info("✅ Using existing MongoDB connection");
+    return;
+  }
+
+  try {
+    await mongoose.connect(MONGO_URI, {
+      retryWrites: true,
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000
+    });
+    isConnected = true;
+    logger.info("✅ MongoDB Connected");
+  } catch (err) {
     logger.error(`MongoDB Connection Failed: ${err.message}`);
-    process.exit(1);
-  });
+    throw err;
+  }
+};
 
 // Schema with validation
 const AQISchema = new mongoose.Schema({
@@ -80,20 +86,20 @@ const validateAQIInput = (req, res, next) => {
   const { city, aqi, pm25 } = req.body;
 
   if (!city || typeof city !== "string" || city.trim().length < 2) {
-    return res.status(400).json({ 
-      error: "Invalid city name. Must be at least 2 characters." 
+    return res.status(400).json({
+      error: "Invalid city name. Must be at least 2 characters."
     });
   }
 
   if (aqi === undefined || typeof aqi !== "number" || aqi < 0 || aqi > 500) {
-    return res.status(400).json({ 
-      error: "Invalid AQI. Must be a number between 0 and 500." 
+    return res.status(400).json({
+      error: "Invalid AQI. Must be a number between 0 and 500."
     });
   }
 
   if (pm25 === undefined || typeof pm25 !== "number" || pm25 < 0) {
-    return res.status(400).json({ 
-      error: "Invalid PM2.5. Must be a non-negative number." 
+    return res.status(400).json({
+      error: "Invalid PM2.5. Must be a non-negative number."
     });
   }
 
@@ -102,35 +108,37 @@ const validateAQIInput = (req, res, next) => {
 
 // ✅ FIXED: Single /save endpoint
 app.post("/save", validateAQIInput, async (req, res) => {
+  await connectDB();
   try {
     const { city, aqi, pm25, pm10 = 0, o3 = 0 } = req.body;
 
-    const newData = new AQI({ 
-      city: city.trim(), 
-      aqi, 
-      pm25, 
-      pm10, 
-      o3 
+    const newData = new AQI({
+      city: city.trim(),
+      aqi,
+      pm25,
+      pm10,
+      o3
     });
 
     const savedData = await newData.save();
-    
+
     logger.info(`Data saved for ${city}: AQI=${aqi}`);
-    
-    res.status(201).json({ 
+
+    res.status(201).json({
       message: "Data saved successfully",
-      data: savedData 
+      data: savedData
     });
   } catch (err) {
     logger.error(`Save error: ${err.message}`);
-    res.status(500).json({ 
-      error: "Failed to save data. Please try again." 
+    res.status(500).json({
+      error: "Failed to save data. Please try again."
     });
   }
 });
 
 // ✅ GET historical data
 app.get("/history", async (req, res) => {
+  await connectDB();
   try {
     const { city, limit = 50 } = req.query;
 
@@ -145,21 +153,22 @@ app.get("/history", async (req, res) => {
       .select("city aqi pm25 pm10 o3 date");
 
     logger.info(`Retrieved ${data.length} history records`);
-    
-    res.json({ 
-      count: data.length, 
-      data 
+
+    res.json({
+      count: data.length,
+      data
     });
   } catch (err) {
     logger.error(`History retrieval error: ${err.message}`);
-    res.status(500).json({ 
-      error: "Failed to retrieve history" 
+    res.status(500).json({
+      error: "Failed to retrieve history"
     });
   }
 });
 
 // ✅ GET latest AQI data
 app.get("/latest/:city", async (req, res) => {
+  await connectDB();
   try {
     const { city } = req.params;
 
@@ -167,29 +176,30 @@ app.get("/latest/:city", async (req, res) => {
       return res.status(400).json({ error: "City name is required" });
     }
 
-    const data = await AQI.findOne({ 
-      city: new RegExp(`^${city}$`, "i") 
+    const data = await AQI.findOne({
+      city: new RegExp(`^${city}$`, "i")
     }).sort({ date: -1 });
 
     if (!data) {
-      return res.status(404).json({ 
-        error: `No data found for city: ${city}` 
+      return res.status(404).json({
+        error: `No data found for city: ${city}`
       });
     }
 
     res.json(data);
   } catch (err) {
     logger.error(`Latest data error: ${err.message}`);
-    res.status(500).json({ 
-      error: "Failed to retrieve latest data" 
+    res.status(500).json({
+      error: "Failed to retrieve latest data"
     });
   }
 });
 
 // Health check endpoint
-app.get("/health", (req, res) => {
-  res.json({ 
-    status: "healthy", 
+app.get("/health", async (req, res) => {
+  await connectDB();
+  res.json({
+    status: "healthy",
     timestamp: new Date().toISOString(),
     mongo: mongoose.connection.readyState === 1 ? "connected" : "disconnected"
   });
@@ -204,13 +214,10 @@ app.use((req, res) => {
 // Error handling middleware
 app.use((err, req, res, next) => {
   logger.error(`Unhandled error: ${err.message}`);
-  res.status(500).json({ 
-    error: "Internal server error" 
+  res.status(500).json({
+    error: "Internal server error"
   });
 });
 
-// Server startup
-app.listen(PORT, () => {
-  logger.info(`🚀 Server running on port ${PORT}`);
-  logger.info(`📊 MongoDB URI: ${MONGO_URI.split("@")[MONGO_URI.split("@").length - 1] || "local"}`);
-});
+// Export for Vercel serverless
+module.exports = app;

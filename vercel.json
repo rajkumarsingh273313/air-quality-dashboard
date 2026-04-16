@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "public": "public",
+  "public": true,
   "buildCommand": "npm install",
   "env": {
     "MONGODB_URI": "@mongodb_uri"

@@ -26,8 +26,8 @@
           <span>AirIndex</span>
         </div>
         <nav class="nav" role="navigation" aria-label="Main Navigation">
-          <a href="#air-quality" aria-label="Air Quality Information">Air Quality</a>
-          <a href="#monitors" aria-label="Monitor Stations">Monitors</a>
+          <button id="airQualityBtn" class="nav-link" aria-label="Air Quality Information"><i class="fas fa-wind"></i> Air Quality</button>
+          <button id="monitorsBtn" class="nav-link" aria-label="Monitor Stations"><i class="fas fa-tachometer-alt"></i> Monitors</button>
           <button id="aboutBtn" class="nav-link" aria-label="About AirIndex">About</button>
           <button class="btn-primary" aria-label="Get Started with AirIndex">Get Started</button>
         </nav>
@@ -156,7 +156,7 @@
         </section>
 
         <!-- RIGHT PANEL: AIR QUALITY GUIDELINES & INSIGHTS -->
-        <section class="right-panel" aria-labelledby="guidelines-title">
+        <section class="right-panel" id="air-quality" aria-labelledby="guidelines-title">
           
           <!-- Air Quality Index Guidelines -->
           <div class="card" aria-labelledby="guidelines-title">
@@ -278,8 +278,6 @@
             </div>
           </div>
 
-        </section>
-
       </main>
     </div>
 
@@ -344,6 +342,220 @@
         </section>
       </div>
     </div>
+
+    <!-- AIR QUALITY MODAL -->
+    <div id="airQualityModal" class="modal" aria-hidden="true" role="dialog" aria-labelledby="air-quality-modal-title">
+      <div class="modal-overlay"></div>
+      <div class="modal-content">
+        <button class="modal-close" aria-label="Close Air Quality modal">
+          <i class="fas fa-times"></i>
+        </button>
+
+        <h2 id="air-quality-modal-title"><i class="fas fa-wind"></i> Air Quality Information</h2>
+
+        <!-- AQI Guidelines Section -->
+        <section class="modal-section">
+          <h3 class="modal-heading">AQI Guidelines & Health Effects</h3>
+          <p class="modal-text">
+            The Air Quality Index (AQI) measures how polluted the air is and what associated health effects might be a concern.
+          </p>
+
+          <div class="guidelines-container">
+            <!-- Good -->
+            <div class="guideline-box" style="border-left-color: #00e676;">
+              <div class="guideline-level" style="background: #00e676;">Good</div>
+              <div class="guideline-range">0 - 50</div>
+              <div class="guideline-effect">😄 No health effects</div>
+            </div>
+
+            <!-- Moderate -->
+            <div class="guideline-box" style="border-left-color: #ffeb3b;">
+              <div class="guideline-level" style="background: #ffeb3b; color: #000;">Moderate</div>
+              <div class="guideline-range">51 - 100</div>
+              <div class="guideline-effect">🙂 Minimal for most people</div>
+            </div>
+
+            <!-- Unhealthy for Sensitive Groups -->
+            <div class="guideline-box" style="border-left-color: #ff9800;">
+              <div class="guideline-level" style="background: #ff9800;">U.S.G.</div>
+              <div class="guideline-range">101 - 150</div>
+              <div class="guideline-effect">😷 Sensitive groups affected</div>
+            </div>
+
+            <!-- Unhealthy -->
+            <div class="guideline-box" style="border-left-color: #f44336;">
+              <div class="guideline-level" style="background: #f44336;">Unhealthy</div>
+              <div class="guideline-range">151 - 200</div>
+              <div class="guideline-effect">🤒 Everyone may be affected</div>
+            </div>
+
+            <!-- Very Unhealthy -->
+            <div class="guideline-box" style="border-left-color: #9c27b0;">
+              <div class="guideline-level" style="background: #9c27b0;">V. Unhealthy</div>
+              <div class="guideline-range">201 - 300</div>
+              <div class="guideline-effect">🤢 Health alert condition</div>
+            </div>
+
+            <!-- Hazardous -->
+            <div class="guideline-box" style="border-left-color: #880e4f;">
+              <div class="guideline-level" style="background: #880e4f;">Hazardous</div>
+              <div class="guideline-range">300+</div>
+              <div class="guideline-effect">☠️ Emergency condition</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Pollutant Information -->
+        <section class="modal-section">
+          <h3 class="modal-heading">Key Pollutants</h3>
+          <div class="pollutants-grid">
+            <div class="pollutant-item">
+              <strong>PM2.5</strong><br>
+              <small>Particulate Matter ≤2.5μm</small><br>
+              <span>Penetrates deep into lungs</span>
+            </div>
+            <div class="pollutant-item">
+              <strong>PM10</strong><br>
+              <small>Particulate Matter ≤10μm</small><br>
+              <span>Affects respiratory system</span>
+            </div>
+            <div class="pollutant-item">
+              <strong>O₃</strong><br>
+              <small>Ozone</small><br>
+              <span>Ground-level harmful pollutant</span>
+            </div>
+            <div class="pollutant-item">
+              <strong>NO₂</strong><br>
+              <small>Nitrogen Dioxide</small><br>
+              <span>Contributes to acid rain</span>
+            </div>
+            <div class="pollutant-item">
+              <strong>SO₂</strong><br>
+              <small>Sulfur Dioxide</small><br>
+              <span>Causes respiratory issues</span>
+            </div>
+            <div class="pollutant-item">
+              <strong>CO</strong><br>
+              <small>Carbon Monoxide</small><br>
+              <span>Reduces oxygen in blood</span>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- MONITORS MODAL -->
+    <div id="monitorsModal" class="modal" aria-hidden="true" role="dialog" aria-labelledby="monitors-modal-title">
+      <div class="modal-overlay"></div>
+      <div class="modal-content">
+        <button class="modal-close" aria-label="Close Monitors modal">
+          <i class="fas fa-times"></i>
+        </button>
+
+        <h2 id="monitors-modal-title"><i class="fas fa-tachometer-alt"></i> Air Quality Monitoring</h2>
+
+        <!-- Air Quality Facts -->
+        <section class="modal-section">
+          <h3 class="modal-heading">Key Air Quality Facts</h3>
+          <ul class="modal-list">
+            <li><strong>Air Quality Index (AQI)</strong> measures how polluted the air is and what associated health effects might be a concern.</li>
+            <li><strong>PM2.5</strong> particles are 30 times smaller than a human hair and can penetrate deep into the lungs.</li>
+            <li><strong>PM10</strong> particles are larger but still harmful, mainly affecting the respiratory system.</li>
+            <li><strong>Ozone (O₃)</strong> at ground level is a harmful pollutant that can cause breathing problems.</li>
+            <li><strong>NO₂, SO₂, and CO</strong> are gases that contribute to acid rain and respiratory issues.</li>
+            <li>Air pollution causes <strong>7 million premature deaths</strong> annually worldwide (WHO, 2022).</li>
+            <li>Children, elderly, and people with respiratory conditions are most vulnerable.</li>
+          </ul>
+        </section>
+
+        <!-- AQI Formula -->
+        <section class="modal-section">
+          <h3 class="modal-heading">How AQI is Calculated</h3>
+          <p class="modal-text">
+            The Air Quality Index is calculated using a formula that considers multiple pollutants:
+          </p>
+
+          <div class="formula-box">
+            <strong>AQI Formula:</strong><br>
+            AQI = max(AQI_PM2.5, AQI_PM10, AQI_O3, AQI_NO2, AQI_SO2, AQI_CO)
+          </div>
+
+          <p class="modal-text">
+            Each pollutant has its own sub-index calculated as:
+          </p>
+          <div class="formula-box">
+            AQI_pollutant = [(I_high - I_low) / (C_high - C_low)] × (C - C_low) + I_low
+          </div>
+
+          <p class="modal-text"><strong>Where:</strong></p>
+          <ul class="modal-list">
+            <li><strong>I_high, I_low</strong> = AQI breakpoint values</li>
+            <li><strong>C_high, C_low</strong> = Pollutant concentration breakpoints</li>
+            <li><strong>C</strong> = Actual pollutant concentration</li>
+          </ul>
+        </section>
+
+        <!-- Web Monitoring Information -->
+        <section class="modal-section">
+          <h3 class="modal-heading">How This Web App Monitors Air Quality</h3>
+          <p class="modal-text">
+            This application uses multiple data sources to provide accurate air quality information:
+          </p>
+
+          <div class="monitoring-steps">
+            <div class="step">
+              <div class="step-number">1</div>
+              <div class="step-content">
+                <strong>API Integration</strong><br>
+                Connects to weather APIs (like OpenWeatherMap) to fetch real-time pollutant data
+              </div>
+            </div>
+
+            <div class="step">
+              <div class="step-number">2</div>
+              <div class="step-content">
+                <strong>Data Processing</strong><br>
+                Processes raw pollutant concentrations (PM2.5, PM10, O₃, etc.) using EPA formulas
+              </div>
+            </div>
+
+            <div class="step">
+              <div class="step-number">3</div>
+              <div class="step-content">
+                <strong>AQI Calculation</strong><br>
+                Calculates AQI using the highest pollutant sub-index as the overall AQI
+              </div>
+            </div>
+
+            <div class="step">
+              <div class="step-number">4</div>
+              <div class="step-content">
+                <strong>Health Assessment</strong><br>
+                Provides health advisories based on AQI levels and vulnerable groups
+              </div>
+            </div>
+
+            <div class="step">
+              <div class="step-number">5</div>
+              <div class="step-content">
+                <strong>Data Storage</strong><br>
+                Stores historical data in MongoDB for trend analysis and predictions
+              </div>
+            </div>
+          </div>
+
+          <h4>Monitoring Stations</h4>
+          <p class="modal-text">Air quality data comes from:</p>
+          <ul class="modal-list">
+            <li><strong>Government Monitors</strong>: EPA-certified stations with precise instruments</li>
+            <li><strong>Community Sensors</strong>: Low-cost sensors providing hyper-local data</li>
+            <li><strong>Satellite Data</strong>: NASA satellites for global coverage</li>
+            <li><strong>Weather APIs</strong>: Real-time integration with weather services</li>
+          </ul>
+        </section>
+      </div>
+    </div>
+
     <script src="script.js" defer></script>
     
     <!-- Skip to main content link (accessibility) -->

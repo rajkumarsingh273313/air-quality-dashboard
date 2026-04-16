@@ -849,19 +849,49 @@ function initEventListeners() {
     });
   }
 
-  if (modalClose && aboutModal) {
-    modalClose.addEventListener("click", () => {
-      aboutModal.classList.remove("active");
-      aboutModal.setAttribute("aria-hidden", "true");
+  // Air Quality Modal handlers
+  const airQualityBtn = document.getElementById("airQualityBtn");
+  const airQualityModal = document.getElementById("airQualityModal");
+
+  if (airQualityBtn && airQualityModal) {
+    airQualityBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      airQualityModal.classList.add("active");
+      airQualityModal.setAttribute("aria-hidden", "false");
     });
   }
 
-  if (modalOverlay && aboutModal) {
-    modalOverlay.addEventListener("click", () => {
-      aboutModal.classList.remove("active");
-      aboutModal.setAttribute("aria-hidden", "true");
+  // Monitors Modal handlers
+  const monitorsBtn = document.getElementById("monitorsBtn");
+  const monitorsModal = document.getElementById("monitorsModal");
+
+  if (monitorsBtn && monitorsModal) {
+    monitorsBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      monitorsModal.classList.add("active");
+      monitorsModal.setAttribute("aria-hidden", "false");
     });
   }
+
+  // Close modal handlers (works for all modals)
+  const closeButtons = document.querySelectorAll(".modal-close");
+  const overlays = document.querySelectorAll(".modal-overlay");
+
+  closeButtons.forEach(button => {
+    button.addEventListener("click", () => {
+      const modal = button.closest(".modal");
+      modal.classList.remove("active");
+      modal.setAttribute("aria-hidden", "true");
+    });
+  });
+
+  overlays.forEach(overlay => {
+    overlay.addEventListener("click", () => {
+      const modal = overlay.closest(".modal");
+      modal.classList.remove("active");
+      modal.setAttribute("aria-hidden", "true");
+    });
+  });
 
   // Close modal on Escape key
   if (aboutModal) {

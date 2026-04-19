@@ -904,6 +904,340 @@ function initEventListeners() {
   }
 }
 
+// ============ PATIENT MONITORING SYSTEM ============
+const PatientMonitor = {
+  patients: [],
+  alerts: [],
+  monitoringInterval: null,
+  alarmAudio: null,
+
+  init() {
+    this.loadPatients();
+    this.setupEventListeners();
+    this.startMonitoring();
+    console.log("✅ Patient Monitoring System initialized");
+  },
+
+  loadPatients() {
+    const saved = localStorage.getItem('patients');
+    this.patients = saved ? JSON.parse(saved) : [];
+    this.renderPatients();
+  },
+
+  savePatients() {
+    localStorage.setItem('patients', JSON.stringify(this.patients));
+  },
+
+  setupEventListeners() {
+    const addBtn = document.getElementById('addPatientBtn');
+    if (addBtn) {
+      addBtn.addEventListener('click', () => this.addPatient());
+    }
+
+    // Allow Enter key to add patient
+    const inputs = ['patientName', 'patientAge', 'patientPhone'];
+    inputs.forEach(id => {
+      const input = document.getElementById(id);
+      if (input) {
+        input.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') this.addPatient();
+        });
+      }
+    });
+  },
+
+  addPatient() {
+    const name = document.getElementById('patientName')?.value?.trim();
+    const type = document.getElementById('patientType')?.value?.trim();
+    const age = parseInt(document.getElementById('patientAge')?.value) || 0;
+    const phone = document.getElementById('patientPhone')?.value?.trim();
+
+    if (!name || !type || age < 1 || age > 120) {
+      showError('Please fill in all fields correctly (Age: 1-120)');
+      return;
+    }
+
+    const patient = {
+      id: Date.now(),
+      name,
+      type,
+      age,
+      phone,
+      status: 'stable',
+      heartRate: 70,
+      temperature: 98.6,
+      oxygenLevel: 98,
+      bloodPressure: '120/80',
+      createdAt: new Date().toISOString()
+    };
+
+    this.patients.push(patient);
+    this.savePatients();
+    this.renderPatients();
+    this.clearForm();
+    showSuccess(`${name} added to monitoring system`);
+  },
+
+  clearForm() {
+    document.getElementById('patientName').value = '';
+    document.getElementById('patientType').value = '';
+    document.getElementById('patientAge').value = '';
+    document.getElementById('patientPhone').value = '';
+  },
+
+  updatePatientVitals(patientId) {
+    const patient = this.patients.find(p => p.id === patientId);
+    if (!patient) return;
+
+    // Simulate vital signs with realistic variations
+    patient.heartRate = this.generateVital(60, 100, 10);
+    patient.temperature = this.generateVital(98.6, 98.6, 0.5);
+    patient.oxygenLevel = this.generateVital(95, 100, 3);
+    
+    const systolic = this.generateVital(110, 130, 10);
+    const diastolic = this.generateVital(70, 85, 5);
+    patient.bloodPressure = `${systolic}/${diastolic}`;
+
+    this.checkPatientStatus(patient);
+    this.savePatients();
+  },
+
+  generateVital(target, max, variation) {
+    const random = (Math.random() - 0.5) * variation;
+    const value = target + random;
+    return Math.max(0, Math.min(max, Math.round(value * 10) / 10));
+  },
+
+  checkPatientStatus(patient) {
+    let status = 'stable';
+    let severity = 0;
+    const warnings = [];
+
+    // Check heart rate
+    if (patient.heartRate < 60 || patient.heartRate > 100) {
+      severity++;
+      warnings.push(`Abnormal HR: ${patient.heartRate}`);
+    }
+    if (patient.heartRate < 50 || patient.heartRate > 120) {
+      severity += 2;
+    }
+
+    // Check temperature
+    if (patient.temperature < 97.5 || patient.temperature > 99.5) {
+      severity++;
+      warnings.push(`Fever/Hypothermia: ${patient.temperature}°F`);
+    }
+    if (patient.temperature < 95 || patient.temperature > 104) {
+      severity += 2;
+    }
+
+    // Check oxygen level
+    if (patient.oxygenLevel < 95) {
+      severity += 2;
+      warnings.push(`Low O₂: ${patient.oxygenLevel}%`);
+    }
+    if (patient.oxygenLevel < 90) {
+      severity += 3;
+    }
+
+    // Determine status
+    if (severity >= 5) {
+      status = 'danger';
+      this.triggerAlert(patient, 'DANGER', warnings.join(', '));
+    } else if (severity >= 2) {
+      status = 'warning';
+      this.triggerAlert(patient, 'WARNING', warnings.join(', '));
+    } else {
+      status = 'stable';
+    }
+
+    patient.status = status;
+  },
+
+  triggerAlert(patient, type, message) {
+    const alert = {
+      id: Date.now(),
+      patientId: patient.id,
+      patientName: patient.name,
+      type: type.toLowerCase(),
+      message: `${patient.name} (${patient.type}): ${message}`,
+      timestamp: new Date(),
+      read: false
+    };
+
+    // Check if similar alert already exists
+    const exists = this.alerts.some(a => 
+      a.patientId === patient.id && 
+      a.type === alert.type &&
+      (Date.now() - a.timestamp.getTime()) < 60000
+    );
+
+    if (!exists) {
+      this.alerts.unshift(alert);
+      if (this.alerts.length > 10) this.alerts.pop();
+
+      // Play alarm for danger
+      if (type === 'DANGER') {
+        this.playAlarm();
+      }
+
+      this.renderAlerts();
+    }
+  },
+
+  playAlarm() {
+    // Create a simple beep sound using Web Audio API
+    try {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.frequency.value = 880; // A5 note
+      oscillator.type = 'sine';
+
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5);
+    } catch (e) {
+      console.warn('Audio API not available');
+    }
+  },
+
+  renderAlerts() {
+    const container = document.getElementById('activeAlerts');
+    if (!container) return;
+
+    if (this.alerts.length === 0) {
+      container.innerHTML = '<div style="color: rgba(255,255,255,0.6); text-align: center; padding: 20px;">✅ All patients stable - No alerts</div>';
+      return;
+    }
+
+    container.innerHTML = this.alerts.map(alert => `
+      <div class="alert-item ${alert.type}">
+        <div class="alert-content">
+          <i class="fas fa-${alert.type === 'danger' ? 'exclamation-circle' : alert.type === 'warning' ? 'exclamation-triangle' : 'check-circle'}"></i>
+          <div class="alert-text">
+            <strong>${alert.type.toUpperCase()}</strong><br>
+            ${alert.message}
+            <br><small>${this.getTimeAgo(alert.timestamp)}</small>
+          </div>
+        </div>
+        <button class="close-alert" onclick="PatientMonitor.dismissAlert(${alert.id})">×</button>
+      </div>
+    `).join('');
+  },
+
+  dismissAlert(alertId) {
+    this.alerts = this.alerts.filter(a => a.id !== alertId);
+    this.renderAlerts();
+  },
+
+  renderPatients() {
+    const container = document.getElementById('patientsList');
+    if (!container) return;
+
+    if (this.patients.length === 0) {
+      container.innerHTML = '<div style="text-align: center; padding: 40px; color: rgba(255,255,255,0.6);">No patients added yet</div>';
+      return;
+    }
+
+    container.innerHTML = this.patients.map(patient => `
+      <div class="patient-card ${patient.status}${patient.status === 'danger' ? ' alarm' : ''}">
+        <div class="patient-header">
+          <div>
+            <div class="patient-name">${patient.name}</div>
+            <span class="patient-type ${patient.type}">${patient.type}</span>
+          </div>
+        </div>
+
+        <div class="patient-info">
+          Age: ${patient.age} | Phone: ${patient.phone}
+        </div>
+
+        <div class="patient-status">
+          <span class="status-indicator ${patient.status}"></span>
+          <span class="status-text">Status: <strong>${patient.status.toUpperCase()}</strong></span>
+        </div>
+
+        <div class="patient-vitals">
+          <div class="vital">
+            <div class="vital-label">Heart Rate</div>
+            <div class="vital-value">${patient.heartRate} <small>bpm</small></div>
+          </div>
+          <div class="vital">
+            <div class="vital-label">Temperature</div>
+            <div class="vital-value">${patient.temperature}°<small>F</small></div>
+          </div>
+          <div class="vital">
+            <div class="vital-label">O₂ Level</div>
+            <div class="vital-value">${patient.oxygenLevel}<small>%</small></div>
+          </div>
+          <div class="vital">
+            <div class="vital-label">BP</div>
+            <div class="vital-value">${patient.bloodPressure}</div>
+          </div>
+        </div>
+
+        <div class="patient-actions">
+          <button class="btn-small" onclick="PatientMonitor.updatePatientVitals(${patient.id})">
+            <i class="fas fa-sync"></i> Refresh
+          </button>
+          <button class="btn-small danger" onclick="PatientMonitor.removePatient(${patient.id})">
+            <i class="fas fa-trash"></i> Remove
+          </button>
+        </div>
+      </div>
+    `).join('');
+  },
+
+  removePatient(patientId) {
+    if (confirm('Remove this patient from monitoring?')) {
+      this.patients = this.patients.filter(p => p.id !== patientId);
+      this.savePatients();
+      this.renderPatients();
+      showSuccess('Patient removed from monitoring');
+    }
+  },
+
+  startMonitoring() {
+    // Update vitals every 30 seconds
+    this.monitoringInterval = setInterval(() => {
+      this.patients.forEach(patient => {
+        this.updatePatientVitals(patient.id);
+      });
+      this.renderPatients();
+    }, 30000);
+
+    // Initial update
+    this.patients.forEach(patient => {
+      this.updatePatientVitals(patient.id);
+    });
+    this.renderPatients();
+  },
+
+  stopMonitoring() {
+    if (this.monitoringInterval) {
+      clearInterval(this.monitoringInterval);
+      this.monitoringInterval = null;
+    }
+  },
+
+  getTimeAgo(date) {
+    const now = new Date();
+    const diff = Math.floor((now - date) / 1000);
+
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
+    return `${Math.floor(diff / 86400)} days ago`;
+  }
+};
+
 // ============ INITIALIZATION ============
 window.addEventListener("DOMContentLoaded", () => {
   console.log("🚀 Initializing AirIndex Application...");
@@ -913,6 +1247,9 @@ window.addEventListener("DOMContentLoaded", () => {
     startTimeUpdater();
     initChart();
     initEventListeners();
+
+    // Initialize patient monitoring
+    PatientMonitor.init();
 
     // Load default city
     console.log("📍 Loading default city: Hyderabad");
@@ -928,4 +1265,5 @@ window.addEventListener("DOMContentLoaded", () => {
 window.addEventListener("beforeunload", () => {
   aiModel.dispose();
   if (chart) chart.destroy();
+  PatientMonitor.stopMonitoring();
 });
